@@ -8,10 +8,12 @@ def main():
     attackers = [
         Unit.Infantry(),
         Unit.Infantry(),
+        Unit.Infantry(),
         Unit.TankDestroyer(),
         Unit.TankDestroyer(),
     ]
     defenders = [
+        Unit.Infantry(),
         Unit.Infantry(),
         Unit.Infantry(),
         Unit.MediumArmor(),
@@ -19,8 +21,8 @@ def main():
     ]
     b = Battle(attackers, defenders, Terrain.Basic)
     # print(b.battle())
-    print(simulate_battle_results(attackers, defenders, Terrain.Basic))
-    # print(compare_armies_in_terrain(attackers, defenders, Terrain.Basic))
+    # print(simulate_battle_results(attackers, defenders, Terrain.Basic))
+    print(compare_armies_in_terrain(attackers, defenders, Terrain.Basic))
     # print(get_all_legal_unit_builds([Unit.Militia, Unit.Infantry, Unit.Cavalry, Unit.Artillery], 20))
 
 if __name__ == "__main__":
