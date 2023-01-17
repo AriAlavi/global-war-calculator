@@ -341,7 +341,6 @@ class Fortification(Unit):
     first_strike = True
     attack_count = 2
     initial_attack_only = True
-    # Buffs all infantry +2 on the first round
 
 SOVIET_UNITS = [
     Militia,
