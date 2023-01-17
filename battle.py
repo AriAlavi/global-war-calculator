@@ -2,23 +2,34 @@ from typing import List, Tuple
 from enum import Enum
 from terrains import *
 from units import Unit
-from dice import d12_less
+from dice import d12_less, d12
 from itertools import combinations
+from dataclasses import dataclass
 
 class BattleResult(Enum):
     attacker_victory = 1
     defender_victory = 2
 
-def get_losses(attackers: List[Unit], defenders: List[Unit], terrain: Terrain, *,simulation: bool = False) -> Tuple[int, int]:
+
+@dataclass
+class RoundResult:
+    regular_losses: int
+    vehicle_select_losses: int
+    ground_naval_losses: int
+
+    def loss_sum(self):
+        return self.regular_losses + self.vehicle_select_losses + self.ground_naval_losses
+
+def get_losses(attackers: List[Unit], defenders: List[Unit], terrain: Terrain, *,simulation: bool = False) -> Tuple[RoundResult, RoundResult]:
     """
-    Gets number of units that die in a round of combat, does not say which units
+    Gets number of units that die in a round of combat, does not say which units, but specifies the unit types targetted by target select
     Args:
         attackers (List[Unit]): All attacking units which may fight
         defenders (List[Unit]): All defending which may fight
         simulation (Bool): This attack should not have lasting effects on the battle
     """
-    attacking_losses = 0 
-    defending_losses = 0
+    attack_results = RoundResult(0, 0, 0)
+    defend_results = RoundResult(0, 0, 0)
     for attacker in attackers:
         attacker.simulation = simulation
         if not attacker.can_attack():
@@ -29,7 +40,7 @@ def get_losses(attackers: List[Unit], defenders: List[Unit], terrain: Terrain, *
             attack_value = 1
         for _ in range(attacker.attack_count):
             if d12_less(attack_value):
-                defending_losses += 1
+                defend_results.regular_losses += 1
 
 
     for defender in defenders:
@@ -43,7 +54,7 @@ def get_losses(attackers: List[Unit], defenders: List[Unit], terrain: Terrain, *
 
         for _ in range(defender.attack_count):
             if d12_less(terrain.modified_defense(defender, defenders)):
-                attacking_losses += 1
+                attack_results.regular_losses += 1
 
     for attacker in attackers:
         attacker.simulation = False
@@ -54,7 +65,7 @@ def get_losses(attackers: List[Unit], defenders: List[Unit], terrain: Terrain, *
         defender.reset_synergy()
 
 
-    return attacking_losses, defending_losses
+    return attack_results, defend_results
 
 
 def objectively_evaluate_armies(attackers: List[Unit], defenders: List[Unit], terrain: Terrain) -> float:
@@ -65,7 +76,7 @@ def objectively_evaluate_armies(attackers: List[Unit], defenders: List[Unit], te
     simulation_results = []
     for _ in range(20):
         attack_losses, defense_losses = get_losses(attackers, defenders, terrain, simulation=True)
-        simulation_results.append(attack_losses-defense_losses)
+        simulation_results.append(attack_losses.loss_sum()-defense_losses.loss_sum())
     return sum(simulation_results)
 
 def get_potential_loss_combinations(units: List[Unit], loss_count: int) -> List[List[Unit]]:
@@ -122,7 +133,7 @@ def battle_round_simulation(attacking_targets: List[Unit], defending_targets: Li
 
     # Get attacks and losses of non-target-selecting 
     attacking_loss_count, defending_loss_count = get_losses(attackers, defenders, terrain)
-    attacking_losses, defending_losses = loss_selector(attacking_targets, defending_targets, attacking_loss_count, defending_loss_count, terrain)
+    attacking_losses, defending_losses = loss_selector(attacking_targets, defending_targets, attacking_loss_count.loss_sum(), defending_loss_count.loss_sum(), terrain)
     
     all_attacking_survivors = []
     all_defending_survivors = []

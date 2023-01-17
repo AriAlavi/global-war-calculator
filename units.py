@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 class UnitType(Enum):
     infantry = 1
@@ -9,6 +9,11 @@ class UnitType(Enum):
     aa = 5
     artilery = 6
     fortification = 7
+
+
+class TargetSelect(Enum):
+    ground_and_naval = 1
+    vehicle = 2
 
 class Unit:
     attack_roll: int = None
@@ -22,10 +27,24 @@ class Unit:
     first_strike: bool = False
     attack_count: int = 1
     initial_attack_only: bool = False
-    target_select: dict = {}
+    target_select_roll: Optional[int] = None
+    target_select_type: Optional[TargetSelect] = None
     already_attacked: bool = False # used for those units with `initial_attack_only = True`, shows that an attack has already happened 
     artillery_paired: bool = False # temp value to show that the unit is already paired with an artillery
     simulation: bool = False # temp value to show that the unit should not make permenant changes to its state
+    already_dead: bool = False # temp value to show that the unit has been marked for death
+
+    def __str__(self):
+        name = type(self).__name__
+        dead_str = "[dead]" if self.already_dead else ""
+        return f"{dead_str}{name}" 
+
+    def __repr__(self):
+        return str(self)
+
+    @property
+    def can_target_select(self):
+        return self.target_select_roll and self.target_select_type
 
     def get_attack(self, friendlies: List["Unit"]) -> int:
         """
@@ -57,25 +76,6 @@ class Unit:
                 self.already_attacked = True
             return True
         return True
-
-
-def valid_target_vehicle(target: Unit) -> bool:
-    """
-    To be used by target select to see if it is a valid target
-    """
-    return target.unit_type == UnitType.vehicle
-
-def valid_target_ground_or_naval_unit(target: Unit) -> bool:
-    """
-    To be used by target select to see if it is a valid target
-    """
-    return target.unit_type in [
-        UnitType.aa,
-        UnitType.artilery,
-        UnitType.infantry,
-        UnitType.vehicle,
-        UnitType.naval,
-    ]
 
 
 class InfantryUnit(Unit):
@@ -179,10 +179,8 @@ class TankDestroyer(Unit):
     movement = 2
     cost = 5
     unit_type = UnitType.vehicle
-    target_select = {
-        "roll": 3,
-        "valid_targets": valid_target_vehicle,
-    }
+    target_select_type = TargetSelect.vehicle
+    target_select_roll = 3
 
 class LightArmor(Unit):
     attack_roll = 3
@@ -206,10 +204,8 @@ class T34(Unit):
     cost = 5
     researched = False
     unit_type = UnitType.vehicle
-    target_select = {
-        "roll": 1,
-        "valid_targets": valid_target_vehicle,
-    }
+    target_select_roll = 1
+    target_select_type = TargetSelect.vehicle
 
 class HeavyArmor(Unit):
     attack_roll = 8
@@ -218,10 +214,8 @@ class HeavyArmor(Unit):
     cost = 7
     researched = False
     unit_type = UnitType.vehicle
-    target_select = {
-        "roll": 1,
-        "valid_targets": valid_target_vehicle,
-    }
+    target_select_roll = 1
+    target_select_type = TargetSelect.vehicle
 
 class Artillery(Unit):
     attack_roll = 3
@@ -301,10 +295,8 @@ class TacticalBomber(Unit):
     movement = 4
     cost = 11
     unit_type = UnitType.aircraft
-    target_select = {
-        "roll": 3,
-        "valid_targets": valid_target_ground_or_naval_unit,
-    }
+    target_select_roll = 3
+    target_select_type = TargetSelect.ground_and_naval
 
 class MediumBomber(Unit):
     attack_roll = 7
